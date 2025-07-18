@@ -21,13 +21,14 @@ jobs:
       - name: Add config.mak with TARGET and OUTPUT
         run: |
           cd musl-cross-make
-          echo 'TARGET = x86_64-linux-musl' > config.mak
-          echo 'OUTPUT = ../build' >> config.mak
+          ABS_OUTPUT="${GITHUB_WORKSPACE}/build"
+          echo "TARGET = x86_64-linux-musl" > config.mak
+          echo "OUTPUT = ${ABS_OUTPUT}" >> config.mak
 
       - name: Build musl-cross-make
         run: |
           cd musl-cross-make
-          make
+          make all -j8
 
       - name: Install musl-cross-make to build/
         run: |
