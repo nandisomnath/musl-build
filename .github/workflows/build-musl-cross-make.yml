@@ -1,16 +1,14 @@
 name: Build musl-cross-make
 
 on:
-  workflow_dispatch: # allows you to manually trigger the workflow
+  push:            # triggers on any push to any branch
+  workflow_dispatch: # enables manual trigger from GitHub UI
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout this repository (if needed)
-        uses: actions/checkout@v4
-
       - name: Install dependencies
         run: |
           sudo apt-get update
@@ -20,7 +18,12 @@ jobs:
         run: |
           git clone https://github.com/richfelker/musl-cross-make.git
 
-      - name: Run make inside musl-cross-make
+      - name: Add config.mak with TARGET
+        run: |
+          cd musl-cross-make
+          echo 'TARGET = x86_64-linux-musl' > config.mak
+
+      - name: Build musl-cross-make
         run: |
           cd musl-cross-make
           make
