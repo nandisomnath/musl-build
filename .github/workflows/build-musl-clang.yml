@@ -1,0 +1,58 @@
+name: Build musl with clang
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-musl:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y clang make curl
+
+      - name: Download musl source
+        run: |
+          curl -LO https://musl.libc.org/releases/musl-1.2.4.tar.gz
+          tar -xzf musl-1.2.4.tar.gz
+          mv musl-1.2.4 musl-src
+
+      - name: Configure musl with clang
+        working-directory: musl-src
+        run: |
+          mkdir -p ../musl-install
+          CC=clang ./configure --prefix=$(realpath ../musl-install)
+
+      - name: Build musl
+        working-directory: musl-src
+        run: |
+          make -j$(nproc)
+
+      - name: Install musl
+        working-directory: musl-src
+        run: |
+          make install
+
+      - name: Create tarball of musl install directory with OS and Arch
+        id: package
+        run: |
+          OS_NAME=$(uname -s)
+          ARCH_NAME=$(uname -m)
+          TARBALL_NAME="musl-install-${OS_NAME}-${ARCH_NAME}.tar.gz"
+          echo "TARBALL_NAME=$TARBALL_NAME" >> "$GITHUB_ENV"
+          tar -czf "$TARBALL_NAME" musl-install
+
+      - name: Upload musl tarball as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: musl-install-${{ env.OS_NAME }}-${{ env.ARCH_NAME }}
+          path: ${{ env.TARBALL_NAME }}
