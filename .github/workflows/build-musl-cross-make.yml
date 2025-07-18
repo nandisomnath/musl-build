@@ -1,8 +1,8 @@
 name: Build musl-cross-make
 
 on:
-  push:            # triggers on any push to any branch
-  workflow_dispatch: # enables manual trigger from GitHub UI
+  push:
+  workflow_dispatch:
 
 jobs:
   build:
@@ -12,18 +12,44 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y make gcc g++ git
+          sudo apt-get install -y make gcc g++ git tar
 
       - name: Clone musl-cross-make
         run: |
           git clone https://github.com/richfelker/musl-cross-make.git
 
-      - name: Add config.mak with TARGET
+      - name: Add config.mak with TARGET and OUTPUT
         run: |
           cd musl-cross-make
           echo 'TARGET = x86_64-linux-musl' > config.mak
+          echo 'OUTPUT = ../build' >> config.mak
 
       - name: Build musl-cross-make
         run: |
           cd musl-cross-make
           make
+
+      - name: Install musl-cross-make to build/
+        run: |
+          cd musl-cross-make
+          make install
+
+      - name: Determine platform info and create tarball
+        id: platform
+        run: |
+          ARCH=$(uname -m)
+          if [[ "$ARCH" == "x86_64" ]]; then
+            BITS="x64"
+          else
+            BITS="x32"
+          fi
+          OS=${{ runner.os }}
+          FILENAME="musl-cross-toolchain-${BITS}-${OS}.tar.gz"
+          echo "filename=$FILENAME" >> "$GITHUB_OUTPUT"
+          tar -czf "$FILENAME" build
+
+      - name: Upload tarball artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.platform.outputs.filename }}
+          path: ${{ steps.platform.outputs.filename }}
