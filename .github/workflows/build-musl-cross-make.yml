@@ -1,0 +1,26 @@
+name: Build musl-cross-make
+
+on:
+  workflow_dispatch: # allows you to manually trigger the workflow
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout this repository (if needed)
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y make gcc g++ git
+
+      - name: Clone musl-cross-make
+        run: |
+          git clone https://github.com/richfelker/musl-cross-make.git
+
+      - name: Run make inside musl-cross-make
+        run: |
+          cd musl-cross-make
+          make
