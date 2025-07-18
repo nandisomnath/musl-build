@@ -12,28 +12,46 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y make gcc g++ git tar
+          sudo apt-get install -y make gcc g++ git tar wget
 
       - name: Clone musl-cross-make
         run: |
           git clone https://github.com/richfelker/musl-cross-make.git
 
-      - name: Add config.mak with TARGET and OUTPUT (absolute path)
+      - name: Add config.mak with TARGET and OUTPUT
         run: |
           cd musl-cross-make
-          ABS_OUTPUT="${GITHUB_WORKSPACE}/build"
-          echo "TARGET = x86_64-linux-musl" > config.mak
-          echo "OUTPUT = ${ABS_OUTPUT}" >> config.mak
+          echo 'TARGET = x86_64-linux-musl' > config.mak
+          echo 'OUTPUT = ../build' >> config.mak
 
       - name: Build musl-cross-make
         run: |
           cd musl-cross-make
-          make all -j$(nproc)
+          make
 
       - name: Install musl-cross-make to build/
         run: |
           cd musl-cross-make
           make install
+
+      - name: Patch GCC specs to use static linking by default
+        run: |
+          TOOLCHAIN=build/x86_64-linux-musl
+          GCC=$TOOLCHAIN/bin/x86_64-linux-musl-gcc
+          $GCC -dumpspecs > specs
+          # Add -static to default link line
+          sed -i '/\*link:/,/^$/ s/^/%{static|static-pie:-static} /' specs
+          GCC_LIBDIR=$($GCC -print-libgcc-file-name | sed 's,/libgcc.a,,')
+          cp specs $GCC_LIBDIR/specs
+
+      - name: Create symlinks without x86_64-linux-musl- prefix
+        run: |
+          BIN_DIR=build/x86_64-linux-musl/bin
+          for file in $BIN_DIR/x86_64-linux-musl-*; do
+            base=$(basename "$file")
+            linkname="${base#x86_64-linux-musl-}"
+            ln -sf "$base" "$BIN_DIR/$linkname"
+          done
 
       - name: Determine platform info and create tarball
         id: platform
@@ -47,7 +65,7 @@ jobs:
           OS=${{ runner.os }}
           FILENAME="musl-cross-toolchain-${BITS}-${OS}.tar.gz"
           echo "filename=$FILENAME" >> "$GITHUB_OUTPUT"
-          tar -czf "$FILENAME" -C "$GITHUB_WORKSPACE" build
+          tar -czf "$FILENAME" build
 
       - name: Upload tarball artifact
         uses: actions/upload-artifact@v4
