@@ -28,7 +28,7 @@ jobs:
       - name: Build musl-cross-make
         run: |
           cd musl-cross-make
-          make -j$(nproc)
+          make all -j$(nproc)
 
       - name: Install musl-cross-make to build/
         run: |
