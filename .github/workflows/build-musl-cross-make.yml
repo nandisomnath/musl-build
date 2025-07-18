@@ -18,16 +18,17 @@ jobs:
         run: |
           git clone https://github.com/richfelker/musl-cross-make.git
 
-      - name: Add config.mak with TARGET and OUTPUT
+      - name: Add config.mak with TARGET and OUTPUT (absolute path)
         run: |
           cd musl-cross-make
-          echo 'TARGET = x86_64-linux-musl' > config.mak
-          echo 'OUTPUT = ../build' >> config.mak
+          ABS_OUTPUT="${GITHUB_WORKSPACE}/build"
+          echo "TARGET = x86_64-linux-musl" > config.mak
+          echo "OUTPUT = ${ABS_OUTPUT}" >> config.mak
 
       - name: Build musl-cross-make
         run: |
           cd musl-cross-make
-          make
+          make -j$(nproc)
 
       - name: Install musl-cross-make to build/
         run: |
@@ -46,7 +47,7 @@ jobs:
           OS=${{ runner.os }}
           FILENAME="musl-cross-toolchain-${BITS}-${OS}.tar.gz"
           echo "filename=$FILENAME" >> "$GITHUB_OUTPUT"
-          tar -czf "$FILENAME" build
+          tar -czf "$FILENAME" -C "$GITHUB_WORKSPACE" build
 
       - name: Upload tarball artifact
         uses: actions/upload-artifact@v4
